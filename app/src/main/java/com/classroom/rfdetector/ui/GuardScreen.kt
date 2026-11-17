@@ -30,6 +30,8 @@ import com.classroom.rfdetector.RadioProblem
 import com.classroom.rfdetector.core.acknowledgeKey
 import com.classroom.rfdetector.core.*
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.TimeZone
 import java.util.Date
 import java.util.Locale
 
@@ -40,6 +42,18 @@ private val okDim = Color(0xFF12301F)
 private val warnDim = Color(0xFF3A2910)
 
 private fun clock(timeMs: Long): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timeMs))
+
+/** 저장한 시각. 오늘이 아니면 날짜도 붙인다. 어제나 다른 교실에서 저장한 기록을 오늘 것으로 착각하지 않게 하기 위해서다. */
+internal fun savedAt(timeMs: Long, nowMs: Long, zone: TimeZone = TimeZone.getDefault()): String {
+    val saved = Calendar.getInstance(zone).apply { timeInMillis = timeMs }
+    val now = Calendar.getInstance(zone).apply { timeInMillis = nowMs }
+    val pattern = when {
+        saved.get(Calendar.YEAR) != now.get(Calendar.YEAR) -> "yyyy년 M월 d일 HH:mm"
+        saved.get(Calendar.DAY_OF_YEAR) != now.get(Calendar.DAY_OF_YEAR) -> "M월 d일 HH:mm"
+        else -> "HH:mm"
+    }
+    return SimpleDateFormat(pattern, Locale.KOREAN).apply { timeZone = zone }.format(Date(timeMs))
+}
 private fun minSec(seconds: Int) = if (seconds >= 60) "${seconds / 60}분 ${seconds % 60}초" else "${seconds}초"
 
 /**
@@ -119,7 +133,7 @@ fun GuardScreen(vm: AppViewModel, permissionMissing: Boolean, onStart: () -> Uni
                     saved?.let { record ->
                         item {
                             OutlinedButton(onClick = { vm.useSavedBaseline(); onStart() }, modifier = Modifier.fillMaxWidth()) {
-                                Text("${clock(record.capturedAtMs)}에 저장한 기록으로 바로 감시")
+                                Text("${savedAt(record.capturedAtMs, System.currentTimeMillis())}에 저장한 기록으로 바로 감시")
                             }
                         }
                     }

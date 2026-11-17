@@ -14,6 +14,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import com.classroom.rfdetector.App
 import com.classroom.rfdetector.AppViewModel
+import com.classroom.rfdetector.core.SignalSnapshot
+import com.classroom.rfdetector.core.SnapshotStore
 import java.io.File
 import java.time.Duration
 import org.junit.Assert.assertEquals
@@ -72,6 +74,18 @@ class GuardFlowTest {
             saveScreen("guard-6-ended")
             compose.onNodeWithText("같은 빈 교실 기록으로 다시 감시").performClick()
             waitForText("새 전파 없음")
+        } finally { vm.shutdown() }
+    }
+
+    @Test fun savedRecordFromAnotherDayShowsItsDateOnTheQuickStartButton() {
+        val twoDaysMs = 2 * 24 * 60 * 60 * 1000L
+        SnapshotStore(compose.activity.filesDir).save(listOf(SignalSnapshot("", System.currentTimeMillis() - twoDaysMs, false, emptyList())))
+        val vm = launch()
+        try {
+            val label = "에 저장한 기록으로 바로 감시"
+            compose.waitUntil(10_000) { compose.onAllNodes(hasText(label, substring = true)).fetchSemanticsNodes().isNotEmpty() }
+            val text = compose.onNode(hasText(label, substring = true)).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString("") { it.text }
+            assertTrue(text, Regex("""^(\d{4}년 )?\d{1,2}월 \d{1,2}일 \d{2}:\d{2}에 저장한 기록으로 바로 감시$""").matches(text))
         } finally { vm.shutdown() }
     }
 
