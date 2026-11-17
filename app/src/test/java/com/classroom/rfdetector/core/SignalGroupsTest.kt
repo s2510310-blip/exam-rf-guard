@@ -181,4 +181,19 @@ class SignalGroupsTest {
         assertEquals("BLE:name:far watch", result.far.single().key)
         assertEquals(0, result.count)
     }
+
+    @Test fun newHiddenNetworkIsNotListedAsOneThatWasThereBefore() {
+        wifi("b4:a9:4f:c7:31:a2", 0, "KT_GiGA_5G_319F", rssi = -41)
+        wifi("b4:a9:4f:c7:31:a3", 0, null, rssi = -41)
+        val snapshot = SignalSnapshot.capture("A", 1_000, false, tracker.snapshot(1_000, includeInactive = true))
+        val baseline = baselineGroupCounts(snapshot)
+        val samples = baselineSamples(snapshot)
+        // 빈 교실 공유기가 낸 이름 없는 와이파이와, 처음 보는 이름 없는 핫스팟이 함께 잡힌다.
+        wifi("b4:a9:4f:c7:31:a3", 100_000, null, rssi = -41)
+        wifi("da:a1:19:3b:7c:01", 100_000, null, rssi = -50)
+        val view = watchView(tracker.snapshot(101_000, includeInactive = true), baseline, emptySet(), 101_000, baselineWifiAddresses(snapshot), samples)
+        assertEquals("da:a1:19:3b:7c:01", view.wifi.single().strongest.key)
+        val known = view.knownGroups.single { it.key == HIDDEN_WIFI_KEY }
+        assertEquals(listOf("b4:a9:4f:c7:31:a3"), known.live.map { it.key })
+    }
 }

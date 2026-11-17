@@ -133,7 +133,9 @@ fun watchView(devices: List<TrackedDevice>, baseline: Map<String, Int>, acknowle
 private fun knownGroups(devices: List<TrackedDevice>, baseline: Map<String, Int>, acknowledged: Set<String>, baselineWifi: Set<String>,
     samples: List<SnapshotSignal>): List<KnownGroup> {
     val byStrength = compareByDescending<TrackedDevice> { it.rssiEma ?: Double.NEGATIVE_INFINITY }
-    val members = devices.filterNot { it.source == ScanSource.BLE && it.hints.primary == SignalHint.APPLE_FIND_MY }.groupBy { it.groupKey }
+    // 이름 숨김 와이파이는 한 묶음에 서로 다른 기기가 모이므로, 새로 잡혀 위에서 알리는 주소는 "원래 있던 것"에 넣지 않는다.
+    fun isKnown(device: TrackedDevice) = device.groupKey != HIDDEN_WIFI_KEY || device.acknowledgeKey in acknowledged || isSameAccessPoint(device.key, baselineWifi)
+    val members = devices.filterNot { it.source == ScanSource.BLE && it.hints.primary == SignalHint.APPLE_FIND_MY }.filter(::isKnown).groupBy { it.groupKey }
     fun row(key: String, sample: SnapshotSignal?): KnownGroup {
         val all = members[key].orEmpty()
         return KnownGroup(key, sample, baseline[key] ?: 0, all.filter { it.presence != SignalPresence.HISTORY }.sortedWith(byStrength), all.maxByOrNull { it.lastSeenMs })
