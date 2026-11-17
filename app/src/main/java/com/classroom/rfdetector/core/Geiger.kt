@@ -2,6 +2,7 @@ package com.classroom.rfdetector.core
 
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -29,6 +30,11 @@ class GeigerController(context: Context) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var job: Job? = null
 
+    private companion object {
+        /** 등급이 바뀌었는지 이 간격으로 확인한다. 주기는 바꾸지 않는다. */
+        const val TICK_MS = 50L
+    }
+
     @Volatile
     private var cls: DistanceClass = DistanceClass.UNKNOWN
 
@@ -39,23 +45,16 @@ class GeigerController(context: Context) {
     fun start() {
         if (job?.isActive == true) return
         job = scope.launch {
+            val pacer = GeigerPacer()
             while (isActive) {
-                val period = when (cls) {
-                    DistanceClass.VERY_CLOSE -> 350L
-                    DistanceClass.CLOSE -> 800L
-                    DistanceClass.NEAR -> 1600L
-                    DistanceClass.FAR -> 3000L
-                    DistanceClass.UNKNOWN -> 0L
+                val c = cls
+                if (pacer.due(c, SystemClock.elapsedRealtime())) {
+                    val dur = if (c == DistanceClass.VERY_CLOSE) 130L else 60L
+                    runCatching {
+                        vibrator.vibrate(VibrationEffect.createOneShot(dur, VibrationEffect.DEFAULT_AMPLITUDE))
+                    }
                 }
-                if (period == 0L) {
-                    delay(400)
-                    continue
-                }
-                val dur = if (cls == DistanceClass.VERY_CLOSE) 130L else 60L
-                runCatching {
-                    vibrator.vibrate(VibrationEffect.createOneShot(dur, VibrationEffect.DEFAULT_AMPLITUDE))
-                }
-                delay(period)
+                delay(TICK_MS)
             }
         }
     }
@@ -64,5 +63,27 @@ class GeigerController(context: Context) {
         job?.cancel()
         job = null
         runCatching { vibrator.cancel() }
+    }
+}
+
+/**
+ * 마지막 진동 뒤 흐른 시간이 현재 등급의 주기에 이르면 울릴 차례로 본다.
+ * 주기를 통째로 자고 나서 등급을 읽으면, 멀리(3초) 있다가 다가가도 최대 3초 동안 이전 간격대로 기다린다.
+ */
+class GeigerPacer {
+    private var lastPulseMs: Long? = null
+
+    fun due(cls: DistanceClass, nowMs: Long): Boolean {
+        val period = when (cls) {
+            DistanceClass.VERY_CLOSE -> 350L
+            DistanceClass.CLOSE -> 800L
+            DistanceClass.NEAR -> 1600L
+            DistanceClass.FAR -> 3000L
+            DistanceClass.UNKNOWN -> return false
+        }
+        val last = lastPulseMs
+        if (last != null && nowMs - last < period) return false
+        lastPulseMs = nowMs
+        return true
     }
 }
