@@ -69,6 +69,7 @@ fun wifiDetails(frequencyMhz: Int, capabilities: String?, standard: Int?): Map<S
     val (band, channel) = when (frequencyMhz) {
         2484 -> "2.4GHz" to 14
         in 2412..2472 -> "2.4GHz" to (frequencyMhz - 2407) / 5
+        5935 -> "6GHz" to 2 // 6GHz 채널 2(20MHz)만 5955 아래에 있다
         in 5160..5895 -> "5GHz" to (frequencyMhz - 5000) / 5
         in 5955..7115 -> "6GHz" to (frequencyMhz - 5950) / 5
         else -> null to null

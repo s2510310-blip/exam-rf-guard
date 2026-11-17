@@ -28,6 +28,10 @@ class SignalDetailsTest {
         assertEquals(mapOf("보안" to "WEP(오래된 방식)"), wifiDetails(0, "[WEP][ESS]", 1))
     }
 
+    @Test fun sixGhzChannelTwoAt5935MhzIsRead() {
+        assertEquals(mapOf("주파수" to "6GHz · 채널 2"), wifiDetails(5935, null, null))
+    }
+
     @Test fun routerSelfDescriptionIsReadFromTheWpsBlock() {
         fun attribute(type: Int, text: String) = byteArrayOf((type shr 8).toByte(), type.toByte(), 0, text.length.toByte()) + text.toByteArray()
         val wps = byteArrayOf(0x00, 0x50, 0xF2.toByte(), 0x04) + attribute(0x104A, "\u0010") + attribute(0x1021, "EFM Networks") +
