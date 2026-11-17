@@ -22,6 +22,8 @@ class SnapshotStore(private val directory: File) {
 
     fun save(snapshots: List<SignalSnapshot>) {
         val root = JSONObject().put("version", 2).put("snapshots", JSONArray().apply { snapshots.forEach { put(encode(it)) } })
+        // 저장 도중 프로세스가 죽으면 임시 파일이 남는다. 주변 기기의 이름과 주소가 담긴 옛 빈 교실 기록이 계속 남지 않게 지운다.
+        directory.listFiles { f -> f.name.startsWith("signal-snapshots-") && f.name.endsWith(".tmp") }?.forEach { it.delete() }
         val temporary = File.createTempFile("signal-snapshots-", ".tmp", directory)
         try {
             FileOutputStream(temporary).use { stream ->

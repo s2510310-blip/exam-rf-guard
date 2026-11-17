@@ -55,4 +55,13 @@ class SnapshotStoreTest {
         File(directory.root, "signal-snapshots.json").writeText("{\"version\":99,\"snapshots\":[]}")
         SnapshotStore(directory.root).load()
     }
+
+    @Test fun saveRemovesTemporaryFilesLeftByAnInterruptedWrite() {
+        val stale = File(directory.root, "signal-snapshots-123456.tmp").apply { writeText("{\"version\":2,\"snapshots\":[") }
+        val snapshot = SignalSnapshot("3층 제1시험실", 1000, false, listOf(SnapshotSignal("a", ScanSource.BLE, "n", -60.0, "m")))
+        SnapshotStore(directory.root).save(listOf(snapshot))
+        assertFalse(stale.exists())
+        assertEquals(listOf("signal-snapshots.json"), directory.root.list()!!.toList())
+        assertEquals(listOf(snapshot), SnapshotStore(directory.root).load())
+    }
 }
