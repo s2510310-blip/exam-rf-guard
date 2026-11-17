@@ -13,6 +13,15 @@ class DeviceIdentityTest {
         assertNull(resolver.resolve("01:11:22:33:44:55", null, setOf(ScanSource.WIFI), emptySet()).macOrganization)
     }
 
+    @Test fun blockContainerAndPrivateRegistrationsAreNotShownAsMaker() {
+        val blocks = DeviceIdentityResolver(mapOf("70B3D5" to "IEEE Registration Authority", "001122" to "Private", "001123" to "Real Vendor"), emptyMap())
+        val identity = blocks.resolve("70:B3:D5:12:34:56", null, setOf(ScanSource.WIFI), emptySet())
+        assertNull(identity.macOrganization)
+        assertEquals("제조사 미확인", identity.summary)
+        assertNull(blocks.resolve("00:11:22:33:44:55", null, setOf(ScanSource.WIFI), emptySet()).macOrganization)
+        assertEquals("Real Vendor", blocks.resolve("00:11:23:33:44:55", null, setOf(ScanSource.WIFI), emptySet()).macOrganization)
+    }
+
     @Test fun randomAddressCanStillExposeAdvertisingCompany() {
         val identity = resolver.resolve("DA:11:22:33:44:55", "AirPods Pro", setOf(ScanSource.BLE), setOf(76))
         assertEquals(listOf("Apple, Inc."), identity.advertisedCompanies)
