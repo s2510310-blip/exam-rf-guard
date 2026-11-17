@@ -39,6 +39,11 @@ private const val COLLECT_SECONDS = 120
 private val okDim = Color(0xFF12301F)
 private val warnDim = Color(0xFF3A2910)
 
+/** 새 전파 0개일 때의 안내문. 멀리서 약하게 잡히는 새 전파가 있으면 "모두 빈 교실에 있던 것"이라고 하지 않는다. */
+internal fun noNewSignalsText(farCount: Int): String =
+    if (farCount > 0) "가까이에서 잡히는 새 전파는 없습니다. 멀리서 약하게 잡히는 새 전파 ${farCount}종은 아래 접힌 목록에 있습니다."
+    else "지금 잡히는 전파는 모두 빈 교실 기록에 있던 것입니다."
+
 private fun clock(timeMs: Long): String = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timeMs))
 private fun minSec(seconds: Int) = if (seconds >= 60) "${seconds / 60}분 ${seconds % 60}초" else "${seconds}초"
 
@@ -175,7 +180,7 @@ fun GuardScreen(vm: AppViewModel, permissionMissing: Boolean, onStart: () -> Uni
                                 if (watching) Text(when {
                                     found -> "빈 교실에 없던 전파가 지금 잡히고 있습니다. 줄을 눌러 다가가며 세기를 확인하세요. 사라지면 목록에서 빠집니다."
                                     incomplete -> "아래 문제를 해결하기 전까지는 전파가 있어도 표시되지 않을 수 있습니다."
-                                    else -> "지금 잡히는 전파는 모두 빈 교실 기록에 있던 것입니다."
+                                    else -> noNewSignalsText(watch.far.size)
                                 }, color = RfColors.textDim, style = MaterialTheme.typography.bodySmall)
                             }
                         }
