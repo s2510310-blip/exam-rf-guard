@@ -74,6 +74,8 @@ class AppViewModel(private val app: Context) : ViewModel() {
     /** 지금 감시에 쓰는 빈 교실 기록. null이면 아직 측정 전이다. */
     val baselineSnapshot = MutableStateFlow<SignalSnapshot?>(null)
     val baselineSet = MutableStateFlow(false)
+    /** 이번 감시를 시작한 시각. 빈 교실 측정 시간은 들어가지 않는다. 앱을 벗어났다 돌아와도 바뀌지 않는다. */
+    val watchStartedAtMs = MutableStateFlow<Long?>(null)
     /** 앱을 다시 열었을 때 이어 쓸 수 있는, 마지막으로 저장한 빈 교실 기록. */
     val savedBaseline = MutableStateFlow<SignalSnapshot?>(null)
     val snapshotBusy = MutableStateFlow(true)
@@ -162,6 +164,7 @@ class AppViewModel(private val app: Context) : ViewModel() {
                 pausedMs = paused.pausedMs + (System.currentTimeMillis() - resumedPauseAtMs!!).coerceAtLeast(0))
         } else {
             acknowledged.value = emptySet()
+            watchStartedAtMs.value = null
             tracker.clear()
             _devices.value = emptyList()
             watch.value = WatchView()
@@ -220,6 +223,8 @@ class AppViewModel(private val app: Context) : ViewModel() {
     private fun applyBaseline() {
         val baseline = baselineSnapshot.value?.takeIf { scanSession.value != null && it.simulation == simMode.value }
         baselineSet.value = baseline != null
+        if (baseline == null) watchStartedAtMs.value = null
+        else if (watchStartedAtMs.value == null) watchStartedAtMs.value = System.currentTimeMillis()
         baselineGroups = baseline?.let(::baselineGroupCounts) ?: emptyMap()
         baselineWifi = baseline?.let(::baselineWifiAddresses) ?: emptySet()
         baselineSamples = baseline?.let { baselineSamples(it) } ?: emptyList()

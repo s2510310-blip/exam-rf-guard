@@ -51,6 +51,26 @@ class ScanSessionTest {
         assertTrue(vm.baselineSet.value)
     }
 
+    @Test fun watchTimeStartsWhenTheEmptyRoomIsSavedAndSurvivesLeavingTheApp() {
+        val session = vm.scanSession.value!!
+        // 측정하는 동안은 감시 시간이 없다.
+        assertNull(vm.watchStartedAtMs.value)
+        Thread.sleep(5)
+        saveEmptyRoom()
+        val started = vm.watchStartedAtMs.value!!
+        assertTrue("Watch time must not include measuring time", started > session.startedAtMs)
+
+        vm.pauseForBackground()
+        vm.resumeFromBackground()
+        assertEquals(started, vm.watchStartedAtMs.value)
+
+        // 끝낸 뒤 같은 기록으로 다시 감시하면 새로 센다.
+        vm.stopScan()
+        Thread.sleep(5)
+        vm.startScan()
+        assertTrue(vm.watchStartedAtMs.value!! > started)
+    }
+
     @Test fun emptyRoomRecordStartsWatchingAndOnlyNewKindsAreFlagged() {
         assertFalse(vm.baselineSet.value)
         assertEquals(0, vm.watch.value.count)

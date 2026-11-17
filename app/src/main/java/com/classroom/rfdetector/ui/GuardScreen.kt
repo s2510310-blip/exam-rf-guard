@@ -76,6 +76,9 @@ fun GuardScreen(vm: AppViewModel, permissionMissing: Boolean, onStart: () -> Uni
         else -> GuardPhase.READY
     }
     val elapsed = session?.let { ((maxOf(tick, it.startedAtMs) - it.startedAtMs) / 1000).toInt() } ?: 0
+    val watchStartedAt by vm.watchStartedAtMs.collectAsState()
+    // 감시 경과는 빈 교실 기록을 저장한 뒤부터 센다. 측정 시간까지 세면 감시한 시간이 실제보다 길게 보인다.
+    val watchElapsed = watchStartedAt?.let { ((maxOf(tick, it) - it) / 1000).toInt() } ?: 0
     // 빈 교실 기록은 2분 이상, 와이파이 탐색이 두 번 끝난 뒤에 저장한다. 와이파이를 못 쓰는 경우 3분 뒤에는 막지 않는다.
     val collected = simulation || elapsed >= COLLECT_SECONDS + 60 || (elapsed >= COLLECT_SECONDS && vm.wifi.completedScans >= 2)
     // 권한, 비행기 모드, 와이파이·블루투스·위치가 모두 갖춰져야 측정과 감시를 시작할 수 있다.
@@ -171,7 +174,7 @@ fun GuardScreen(vm: AppViewModel, permissionMissing: Boolean, onStart: () -> Uni
                                         else -> "새 전파 없음"
                                     }, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = if (watching) accent else RfColors.textPrimary)
                                 }
-                                Text(if (watching) "감시 중 · ${minSec(elapsed)} 경과" else "지금은 전파를 받지 않습니다")
+                                Text(if (watching) "감시 중 · ${minSec(watchElapsed)} 경과" else "지금은 전파를 받지 않습니다")
                                 if (watching) Text(when {
                                     found -> "빈 교실에 없던 전파가 지금 잡히고 있습니다. 줄을 눌러 다가가며 세기를 확인하세요. 사라지면 목록에서 빠집니다."
                                     incomplete -> "아래 문제를 해결하기 전까지는 전파가 있어도 표시되지 않을 수 있습니다."

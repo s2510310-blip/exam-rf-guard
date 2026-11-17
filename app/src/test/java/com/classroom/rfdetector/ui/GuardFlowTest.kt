@@ -75,6 +75,21 @@ class GuardFlowTest {
         } finally { vm.shutdown() }
     }
 
+    @Test fun watchTimerDoesNotCountTheTimeSpentMeasuring() {
+        val vm = launch()
+        try {
+            compose.onNodeWithText("빈 교실 측정 시작").assertIsDisplayed().performClick()
+            compose.waitUntil(10_000) { vm.devices.value.size == 5 }
+            Thread.sleep(3_200) // 측정에 3초 넘게 걸린 상황. 예전에는 감시 경과가 여기서부터 셌다.
+            compose.onNodeWithText("빈 교실 기록 저장").assertIsDisplayed().performClick()
+            waitForText("새 전파 없음")
+            val text = compose.onNode(hasText("감시 중 · ", substring = true)).fetchSemanticsNode().config
+                .let { it[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString { t -> t.text } }
+            val seconds = Regex("""감시 중 · (\d+)초 경과""").find(text)?.groupValues?.get(1)?.toInt()
+            assertTrue("Watch time must restart at save, was: $text", seconds != null && seconds <= 1)
+        } finally { vm.shutdown() }
+    }
+
     @Test fun backDuringMeasuringOrWatchingAsksBeforeStopping() {
         val vm = launch()
         try {
